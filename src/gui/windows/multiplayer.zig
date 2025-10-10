@@ -12,6 +12,7 @@ const Button = @import("../components/Button.zig");
 const Label = @import("../components/Label.zig");
 const TextInput = @import("../components/TextInput.zig");
 const VerticalList = @import("../components/VerticalList.zig");
+const HorizontalList = @import("../components/HorizontalList.zig");
 
 const globalAllocator = main.globalAllocator.allocator;
 
@@ -92,19 +93,22 @@ fn revealIp(_: usize) void {
 	ipObfuscated = false;
 	ipAddressLabel.updateText(ipAddress);
 	ipAddressEntry.obfuscated = ipObfuscated;
-	ipAddressEntry.updateDashes();
+	ipAddressEntry.updateObfuscation();
 }
 
 pub fn onOpen() void {
-	ipObfuscated = true;
+	ipObfuscated = settings.streamerModeEnabled;
 	const list = VerticalList.init(.{padding, 16 + padding}, 300, 16);
 	list.add(Label.init(.{0, 0}, width, "Please send your IP to the host of the game and enter the host's IP below.", .center));
 	ipAddressLabel = Label.init(.{0, 0}, width, "", .center);
 	list.add(ipAddressLabel);
-	list.add(Button.initText(.{0, 0}, 100, "Reveal", .{.callback = &revealIp}));
-	list.add(Button.initText(.{0, 0}, 100, "Copy IP", .{.callback = &copyIp}));
+	const buttonRow = HorizontalList.init();
+	buttonRow.add(Button.initText(.{0, 0}, 100, "Reveal", .{.callback = &revealIp}));
+	buttonRow.add(Button.initText(.{0, 0}, 100, "Copy IP", .{.callback = &copyIp}));
+	buttonRow.finish(.{0, 0}, .left);
+	list.add(buttonRow);
 	ipAddressEntry = TextInput.init(.{0, 0}, width, 32, settings.lastUsedIPAddress, .{.callback = &join}, .{});
-	ipAddressEntry.obfuscated = true;
+	ipAddressEntry.obfuscated = ipObfuscated;
 	list.add(ipAddressEntry);
 	list.add(Button.initText(.{0, 0}, 100, "Join", .{.callback = &join}));
 	list.finish(.center);
@@ -142,12 +146,13 @@ pub fn update() void {
 	if(gotIpAddress.load(.acquire)) {
 		gotIpAddress.store(false, .monotonic);
 		if(ipObfuscated) {
-			const dash_count = if(ipAddress.len > 0) ipAddress.len else 21;
-			var dashes: [21]u8 = undefined;
-			for(dashes[0..dash_count]) |*c| {
-				c.* = '-';
+			var obfuscatedText = main.List(u8).init(main.globalAllocator);
+			defer obfuscatedText.deinit();
+			var i: usize = 0;
+			while(i < ipAddress.len) : (i += 1) {
+				obfuscatedText.appendSlice("•"); // \u2022
 			}
-			ipAddressLabel.updateText(dashes[0..dash_count]);
+			ipAddressLabel.updateText(obfuscatedText.items);
 		} else {
 			ipAddressLabel.updateText(ipAddress);
 		}
