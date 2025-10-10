@@ -28,6 +28,15 @@ const resolutions = [_]u16{25, 50, 100};
 
 const leavesQualities = [_]u8{0, 1, 2, 3, 4};
 
+fn blockFaceContrastCallback(newValue: f32) void {
+	settings.blockFaceContrast = newValue;
+	settings.save();
+}
+
+fn blockFaceContrastFormatter(allocator: main.heap.NeverFailingAllocator, value: f32) []const u8 {
+	return std.fmt.allocPrint(allocator.allocator, "#ffffffBlock Contrast: {d:.2}", .{value}) catch unreachable;
+}
+
 fn fpsCapRound(newValue: f32) ?u32 {
 	if(newValue < 144.0) {
 		return @as(u32, @intFromFloat(newValue/5.0))*5;
@@ -125,6 +134,7 @@ pub fn onOpen() void {
 	list.add(DiscreteSlider.init(.{0, 0}, 128, "#ffffffLeaves Quality (TODO: requires reload): ", "{}", &leavesQualities, settings.leavesQuality - leavesQualities[0], &leavesQualityCallback));
 	list.add(ContinuousSlider.init(.{0, 0}, 128, 50.0, 400.0, settings.@"lod0.5Distance", &lodDistanceCallback, &lodDistanceFormatter));
 	list.add(ContinuousSlider.init(.{0, 0}, 128, 40.0, 120.0, settings.fov, &fovCallback, &fovFormatter));
+	list.add(ContinuousSlider.init(.{0, 0}, 128, 0.0, 1.0, settings.blockFaceContrast, &blockFaceContrastCallback, &blockFaceContrastFormatter));
 	list.add(CheckBox.init(.{0, 0}, 128, "Bloom", settings.bloom, &bloomCallback));
 	list.add(CheckBox.init(.{0, 0}, 128, "Vertical Synchronization", settings.vsync, &vsyncCallback));
 	list.add(DiscreteSlider.init(.{0, 0}, 128, "#ffffffAnisotropic Filtering: ", "{}x", &anisotropy, switch(settings.anisotropicFiltering) {
